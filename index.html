@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+</head><body>
+<title>Haushaltsplan</title>
+<style>
+  /* Layout: eine linksbündige Spalte, große Typo, feine Linien. Farbe gibt es nur in den Namens-Pillen. */
+  :root {
+    --bg: #ffffff;
+    --fg: #0b0b0b;
+    --muted: #6d6d6d;
+    --line: #d4d4d4;
+    --hl: #f1f1f1;
+
+    /* Namensfarben aus dem Plan, in beiden Themes identisch */
+    --jo-bg: #a0d9ab; --jo-fg: #17702f;
+    --ni-bg: #ffc877; --ni-fg: #c25a00;
+    --ma-bg: #ff8b8b; --ma-fg: #b50f0f;
+
+    --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Roboto Mono", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0b0b0b; --fg: #f4f4f4; --muted: #8e8e8e; --line: #2f2f2f; --hl: #181818;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0b0b0b; --fg: #f4f4f4; --muted: #8e8e8e; --line: #2f2f2f; --hl: #181818;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.4;
+    padding-block: 20px 48px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 720px; margin: 0 auto; min-width: 0; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--fg); outline-offset: 3px; }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0;
+  }
+  h1 {
+    font-size: clamp(44px, 14vw, 96px);
+    line-height: 0.98;
+    letter-spacing: -0.035em;
+    font-weight: 700;
+    margin: 12px 0 0;
+    text-wrap: balance;
+    overflow-wrap: anywhere;
+  }
+  h1:focus { outline: none; }
+
+  /* Pillen */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.32em 0.75em;
+    border-radius: 999px;
+    font-weight: 600;
+    line-height: 1.1;
+  }
+  .pill.jo { background: var(--jo-bg); color: var(--jo-fg); }
+  .pill.ni { background: var(--ni-bg); color: var(--ni-fg); }
+  .pill.ma { background: var(--ma-bg); color: var(--ma-fg); }
+
+  /* Kleine Knöpfe */
+  .bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 40px; }
+  .btn {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: transparent;
+    border: 1px solid var(--fg);
+    border-radius: 999px;
+    padding: 8px 14px;
+    transition: background-color 0.15s, color 0.15s;
+  }
+  .btn:hover { background: var(--fg); color: var(--bg); }
+  .btn.quiet { border-color: transparent; padding-left: 0; padding-right: 0; }
+  .btn.quiet:hover { background: transparent; color: var(--muted); }
+
+  /* Startseite */
+  .people { list-style: none; margin: 40px 0 0; padding: 0; border-bottom: 1px solid var(--line); }
+  .people li { border-top: 1px solid var(--line); }
+  .person {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    background: transparent;
+    border: 0;
+    padding: 18px 0;
+    text-align: left;
+  }
+  .person .pill { font-size: clamp(28px, 8vw, 40px); min-width: 2.4em; }
+  .person .arrow {
+    font-family: var(--font-mono);
+    font-size: 22px;
+    color: var(--muted);
+    transition: transform 0.15s, color 0.15s;
+  }
+  .person:hover .arrow, .person:focus-visible .arrow { transform: translateX(6px); color: var(--fg); }
+  .start-foot { margin-top: 28px; }
+
+  /* Tagesansicht */
+  .who { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; margin-top: 28px; }
+  .who .pill { font-size: 24px; }
+  .who .count { font-family: var(--font-mono); font-size: 13px; color: var(--muted); }
+  .tasks { list-style: none; margin: 36px 0 0; padding: 0; border-bottom: 1px solid var(--line); }
+  .tasks li {
+    border-top: 1px solid var(--line);
+    padding: 16px 0;
+    font-size: clamp(30px, 9vw, 48px);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+  .free {
+    margin: 36px 0 0;
+    padding: 20px 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    font-size: clamp(26px, 7vw, 40px);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+  }
+
+  /* Gesamtplan */
+  .tablewrap { margin-top: 36px; border: 1px solid var(--line); border-radius: 8px; overflow-x: auto; }
+  table.plan {
+    width: calc(100% + 2px);
+    min-width: 300px;
+    margin: -1px;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: clamp(11px, 2.9vw, 17px);
+  }
+  .plan th, .plan td { border: 1px solid var(--line); text-align: center; padding: 0; height: 3.1em; }
+  .plan thead th {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 1.15em;
+  }
+  .plan col.lead { width: 19%; }
+  .plan tbody th {
+    text-align: left;
+    font-weight: 600;
+    padding-left: 0.75em;
+    font-size: 1.05em;
+    overflow-wrap: anywhere;
+  }
+  .plan .pill { font-size: 1em; padding: 0.3em 0.55em; }
+  .plan .is-today { background: var(--hl); }
+  .plan thead th.is-today { background: var(--fg); color: var(--bg); }
+  .note { font-family: var(--font-mono); font-size: 12px; color: var(--muted); margin: 14px 0 0; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .btn, .person .arrow { transition: none; }
+  }
+</style>
+
+<main id="app"><p style="font-family:sans-serif;padding:24px 0">Diese Seite braucht einen Browser mit JavaScript. Bitte die Datei in Safari oder Chrome öffnen, nicht in der Dateien-Vorschau.</p></main>
+
+<script>
+(function () {
+  var DAYS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+  var HEAD = ['M', 'D', 'M', 'D', 'F', 'S', 'S'];
+  var NAMES = ['Jo', 'Ni', 'Ma'];
+  var TASKS = ['Müll', 'Wäsche', 'Staub', 'Spül', 'Bad'];
+
+  /* Plan genau wie im Bild: Spalten Mo, Di, Mi, Do, Fr, Sa, So */
+  var PLAN = {
+    'Müll':   ['Jo', 'Jo', 'Jo', 'Jo', 'Jo', 'Jo', 'Jo'],
+    'Wäsche': ['Ni', 'Ma', 'Ni', 'Ma', 'Jo', 'Ni', 'Ni'],
+    'Staub':  ['Ma', null, 'Ma', null, 'Ma', null, 'Ma'],
+    'Spül':   ['Ni', 'Ni', 'Ma', 'Ma', 'Ni', 'Ma', 'Ma'],
+    'Bad':    [null, null, 'Ni', null, null, null, 'Jo']
+  };
+
+  var app = document.getElementById('app');
+  var state = { view: 'pick', person: null, from: 'pick' };
+  var shownDay = null;
+
+  function todayIdx() { return (new Date().getDay() + 6) % 7; }
+  function dateLong() {
+    return new Date().toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' });
+  }
+  function tasksFor(person, d) {
+    return TASKS.filter(function (t) { return PLAN[t][d] === person; });
+  }
+  function pill(name, extra) {
+    return '<span class="pill ' + name.toLowerCase() + (extra ? ' ' + extra : '') + '">' + name + '</span>';
+  }
+
+  function viewPick(d) {
+    var rows = NAMES.map(function (n) {
+      return '<li><button type="button" class="person" data-person="' + n + '" aria-label="' + n + '">' +
+        pill(n) + '<span class="arrow" aria-hidden="true">→</span></button></li>';
+    }).join('');
+    return '<p class="eyebrow">Haushaltsplan · ' + DAYS[d] + '</p>' +
+      '<h1 tabindex="-1" id="h">Wer bist du?</h1>' +
+      '<ul class="people">' + rows + '</ul>' +
+      '<div class="start-foot"><button type="button" class="btn" data-go="plan">Ganzen Plan ansehen</button></div>';
+  }
+
+  function viewToday(d) {
+    var list = tasksFor(state.person, d);
+    var body;
+    if (list.length) {
+      body = '<ul class="tasks">' + list.map(function (t) { return '<li>' + t + '</li>'; }).join('') + '</ul>';
+    } else {
+      body = '<p class="free">Heute nichts zu tun.</p>';
+    }
+    var count = list.length === 1 ? '1 Aufgabe' : list.length + ' Aufgaben';
+    return '<div class="bar">' +
+        '<button type="button" class="btn quiet" data-go="pick">← Wechseln</button>' +
+        '<button type="button" class="btn" data-go="plan">Ganzer Plan</button>' +
+      '</div>' +
+      '<p class="eyebrow">Heute · ' + dateLong() + '</p>' +
+      '<h1 tabindex="-1" id="h">' + DAYS[d] + '</h1>' +
+      '<div class="who">' + pill(state.person) + '<span class="count">' + count + '</span></div>' +
+      body;
+  }
+
+  function viewPlan(d) {
+    var head = '<th scope="col"></th>' + HEAD.map(function (h, i) {
+      return '<th scope="col" title="' + DAYS[i] + '" aria-label="' + DAYS[i] + '"' +
+        (i === d ? ' class="is-today"' : '') + '>' + h + '</th>';
+    }).join('');
+    var rows = TASKS.map(function (t) {
+      var cells = PLAN[t].map(function (n, i) {
+        return '<td' + (i === d ? ' class="is-today"' : '') + '>' + (n ? pill(n) : '') + '</td>';
+      }).join('');
+      return '<tr><th scope="row">' + t + '</th>' + cells + '</tr>';
+    }).join('');
+    var backLabel = state.from === 'today' ? '← Mein Tag' : '← Zurück';
+    return '<div class="bar"><button type="button" class="btn quiet" data-go="back">' + backLabel + '</button></div>' +
+      '<p class="eyebrow">Woche</p>' +
+      '<h1 tabindex="-1" id="h">Gesamtplan</h1>' +
+      '<div class="tablewrap"><table class="plan"><colgroup><col class="lead"><col><col><col><col><col><col><col></colgroup>' +
+      '<thead><tr>' + head + '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
+      '<p class="note">Hervorgehoben: heute, ' + DAYS[d] + '</p>';
+  }
+
+  function render(focus) {
+    var d = todayIdx();
+    shownDay = new Date().toDateString();
+    var html = state.view === 'today' ? viewToday(d) : state.view === 'plan' ? viewPlan(d) : viewPick(d);
+    app.innerHTML = html;
+    if (focus) {
+      var h = document.getElementById('h');
+      if (h) { h.focus({ preventScroll: true }); }
+      window.scrollTo(0, 0);
+    }
+  }
+
+  function go(view) {
+    if (view === 'back') {
+      view = state.from === 'today' && state.person ? 'today' : 'pick';
+      state.view = view;
+    } else if (view === 'plan') {
+      state.from = state.view;
+      state.view = 'plan';
+    } else {
+      state.view = view;
+      if (view === 'pick') { state.person = null; }
+    }
+    render(true);
+  }
+
+  app.addEventListener('click', function (e) {
+    var el = e.target.closest('[data-person],[data-go]');
+    if (!el) { return; }
+    if (el.hasAttribute('data-person')) {
+      state.person = el.getAttribute('data-person');
+      state.view = 'today';
+      render(true);
+    } else {
+      go(el.getAttribute('data-go'));
+    }
+  });
+
+  function refreshIfNewDay() {
+    if (shownDay !== new Date().toDateString()) { render(false); }
+  }
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) { refreshIfNewDay(); }
+  });
+  setInterval(refreshIfNewDay, 60000);
+
+  try {
+    render(false);
+  } catch (err) {
+    app.textContent = 'Fehler beim Laden: ' + (err && err.message ? err.message : err);
+  }
+})();
+</script>
+
+</body></html>
